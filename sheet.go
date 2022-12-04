@@ -682,7 +682,7 @@ func (f *File) CopySheetFrom(sf *File, from, to int) error {
 	if from < 0 || to < 0 || sf.GetSheetName(from) == "" || f.GetSheetName(to) == "" {
 		return ErrSheetIdx
 	}
-	return f.copySheet(from, to)
+	return f.copySheetFrom(sf, from, to)
 }
 
 // copySheetFrom provides a function to duplicate a worksheet by gave source file, source sheet and
