@@ -670,6 +670,50 @@ func (f *File) copySheet(from, to int) error {
 	return err
 }
 
+// CopySheetFrom provides a function to duplicate a worksheet by gave source
+// and target worksheet index. Note that currently doesn't support duplicate
+// workbooks that contain tables, charts or pictures. For Example:
+//
+//	// Sheet1 already exists...
+//	index := f.NewSheet("Sheet2")
+//	err := f.CopySheetFrom(1, index)
+//	return err
+func (f *File) CopySheetFrom(sf *File, from, to int) error {
+	if from < 0 || to < 0 || sf.GetSheetName(from) == "" || f.GetSheetName(to) == "" {
+		return ErrSheetIdx
+	}
+	return f.copySheet(from, to)
+}
+
+// copySheetFrom provides a function to duplicate a worksheet by gave source file, source sheet and
+// target worksheet index.
+func (f *File) copySheetFrom(sf *File, from, to int) error {
+	fromSheet := sf.GetSheetName(from)
+	sheet, err := sf.workSheetReader(fromSheet)
+	if err != nil {
+		return err
+	}
+	worksheet := deepcopy.Copy(sheet).(*xlsxWorksheet)
+	toSheetID := strconv.Itoa(f.getSheetID(f.GetSheetName(to)))
+	sheetXMLPath := "xl/worksheets/sheet" + toSheetID + ".xml"
+	if len(worksheet.SheetViews.SheetView) > 0 {
+		worksheet.SheetViews.SheetView[0].TabSelected = false
+	}
+	worksheet.Drawing = nil
+	worksheet.TableParts = nil
+	worksheet.PageSetUp = nil
+	f.Sheet.Store(sheetXMLPath, worksheet)
+	toRels := "xl/worksheets/_rels/sheet" + toSheetID + ".xml.rels"
+	fromRels := "xl/worksheets/_rels/sheet" + strconv.Itoa(sf.getSheetID(fromSheet)) + ".xml.rels"
+	if rels, ok := sf.Pkg.Load(fromRels); ok && rels != nil {
+		f.Pkg.Store(toRels, rels.([]byte))
+	}
+	fromSheetXMLPath, _ := sf.getSheetXMLPath(fromSheet)
+	fromSheetAttr := sf.xmlAttr[fromSheetXMLPath]
+	f.xmlAttr[sheetXMLPath] = fromSheetAttr
+	return err
+}
+
 // SetSheetVisible provides a function to set worksheet visible by given worksheet
 // name. A workbook must contain at least one visible worksheet. If the given
 // worksheet has been activated, this setting will be invalidated. Sheet state

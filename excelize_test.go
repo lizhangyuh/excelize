@@ -1023,6 +1023,24 @@ func TestCopySheetError(t *testing.T) {
 	assert.NoError(t, f.SaveAs(filepath.Join("test", "TestCopySheetError.xlsx")))
 }
 
+func TestCopySheetFrom(t *testing.T) {
+	sf, err := prepareTestBook1()
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	f := NewFile()
+	idx := f.NewSheet("CopySheet")
+	assert.NoError(t, f.CopySheetFrom(sf, 0, idx))
+
+	assert.NoError(t, f.SetCellValue("CopySheet", "F1", "Hello"))
+	val, err := sf.GetCellValue("Sheet1", "F1")
+	assert.NoError(t, err)
+	assert.NotEqual(t, "Hello", val)
+
+	assert.NoError(t, f.SaveAs(filepath.Join("test", "TestCopySheet.xlsx")))
+}
+
 func TestGetSheetComments(t *testing.T) {
 	f := NewFile()
 	assert.Equal(t, "", f.getSheetComments("sheet0"))
